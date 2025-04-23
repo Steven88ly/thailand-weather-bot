@@ -26,7 +26,11 @@ DAYS_TO_CHECK = {
 def get_forecast(city, latlon):
     url = f"https://api.openweathermap.org/data/2.5/forecast?lat={latlon.split(',')[0]}&lon={latlon.split(',')[1]}&appid={OPENWEATHER_API_KEY}&units=metric"
     response = requests.get(url)
-    return response.json()
+    data = response.json()
+    if 'list' not in data:
+        print(f"⚠️ Error fetching data for {city}: {data}")
+        return None
+    return data
 
 # --- ANALYZE FORECAST ---
 def analyze_rain(forecast_data, dates):
@@ -47,6 +51,10 @@ def format_report():
     message = f"\U0001F3D6️ Thailand Weather Update – {datetime.today().strftime('%b %d')}\n\n"
     for city, latlon in LOCATIONS.items():
         forecast = get_forecast(city, latlon)
+        if forecast is None:
+            message += f"\n\U0001F6AB {city}: Error retrieving forecast data.\n"
+            continue
+
         rainy_count, detail = analyze_rain(forecast, DAYS_TO_CHECK[city])
 
         message += f"\n\U0001F4CD {city} ({', '.join(DAYS_TO_CHECK[city])}):\n"
@@ -75,4 +83,5 @@ def send_email(body):
 # --- MAIN ENTRY ---
 if __name__ == "__main__":
     report = format_report()
+    print(report)  # Log report for visibility in GitHub Actions
     send_email(report)
