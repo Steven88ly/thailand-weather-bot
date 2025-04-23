@@ -1,15 +1,15 @@
-# This script uses OpenWeatherMap (fallback for TMD) and GitHub Actions to send daily emails
-# Replace placeholders with your real info before use
+# weather_report.py
 
 import requests
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
+import os
 
 # --- CONFIG ---
-OPENWEATHER_API_KEY = "your_openweather_api_key"
-EMAIL_ADDRESS = "your_email@example.com"
-EMAIL_PASSWORD = "your_email_password"
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 RECIPIENTS = ["chrisforlini1@gmail.com", "steven88ly@gmail.com"]
 
 LOCATIONS = {
@@ -24,13 +24,19 @@ DAYS_TO_CHECK = {
 
 # --- FETCH WEATHER ---
 def get_forecast(city, latlon):
-    url = f"https://api.openweathermap.org/data/2.5/forecast?lat={latlon.split(',')[0]}&lon={latlon.split(',')[1]}&appid={OPENWEATHER_API_KEY}&units=metric"
-    response = requests.get(url)
-    data = response.json()
-    if 'list' not in data:
-        print(f"⚠️ Error fetching data for {city}: {data}")
+    try:
+        lat, lon = latlon.split(',')
+        url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if 'list' not in data:
+            print(f"⚠️ Error fetching data for {city}: {data}")
+            return None
+        return data
+    except Exception as e:
+        print(f"❌ API error for {city}: {e}")
         return None
-    return data
 
 # --- ANALYZE FORECAST ---
 def analyze_rain(forecast_data, dates):
@@ -71,7 +77,7 @@ def format_report():
 
 # --- SEND EMAIL ---
 def send_email(body):
-    msg = MIMEText(body)
+    msg = MIMEText(body, _charset="UTF-8")
     msg["Subject"] = "Daily Thailand Weather Update"
     msg["From"] = EMAIL_ADDRESS
     msg["To"] = ", ".join(RECIPIENTS)
@@ -83,5 +89,5 @@ def send_email(body):
 # --- MAIN ENTRY ---
 if __name__ == "__main__":
     report = format_report()
-    print(report)  # Log report for visibility in GitHub Actions
+    print(report)
     send_email(report)
