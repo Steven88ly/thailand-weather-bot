@@ -30,8 +30,8 @@ def get_forecast(city, latlon):
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
-        if 'list' not in data:
-            print(f"⚠️ Error fetching data for {city}: {data}")
+        if data.get("cod") != "200" or "list" not in data:
+            print(f"⚠️ Invalid data for {city}: {data}")
             return None
         return data
     except Exception as e:
